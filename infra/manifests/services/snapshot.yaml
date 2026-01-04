@@ -1,0 +1,78 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: snapshot-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: snapshot-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/snapshot
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: snapshot-svc
+  namespace: colombus
+  labels:
+    app: snapshot-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: snapshot-svc
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: snapshot-svc
+  namespace: colombus
+  labels:
+    app: snapshot-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: snapshot-svc
+  template:
+    metadata:
+      labels:
+        app: snapshot-svc
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: snapshot-svc
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/snapshot:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080"          
+          envFrom:
+            - secretRef:
+                name: colombus-global-secret
+            - secretRef:
+                name: snapshot-app-secret
+          # readinessProbe:
+          #   httpGet:
+          #     path: /actuator/health
+          #     port: 8080
+          #   initialDelaySeconds: 10
+          #   periodSeconds: 10
+          # livenessProbe:
+          #   httpGet:
+          #     path: /actuator/health
+          #     port: 8080
+          #   initialDelaySeconds: 30
+          #   periodSeconds: 30

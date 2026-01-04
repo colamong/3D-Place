@@ -1,0 +1,88 @@
+# 1) 서비스 전용 ExternalSecret (ASM: colombus/__ASM_KEY__ → k8s Secret: __SVC__-app-secret)
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: __SVC__-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: __SVC__-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/__ASM_KEY__
+
+---
+# 2) Service (ClusterIP: __PORT__)
+apiVersion: v1
+kind: Service
+metadata:
+  name: __SVC__-svc
+  namespace: colombus
+  labels: { app: __SVC__-svc }
+spec:
+  type: ClusterIP
+  selector: { app: __SVC__-svc }
+  ports:
+    - name: http
+      port: __PORT__
+      targetPort: __PORT__
+
+---
+# 3) Deployment (ARM64, envFrom 2개 + properties 마운트)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: __SVC__-svc
+  namespace: colombus
+  labels: { app: __SVC__-svc }
+spec:
+  replicas: 2
+  selector:
+    matchLabels: { app: __SVC__-svc }
+  template:
+    metadata:
+      labels: { app: __SVC__-svc }
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: __SVC__-svc
+          image: __IMAGE__
+          imagePullPolicy: Always
+          ports:
+            - containerPort: __PORT__
+
+          envFrom:
+            - secretRef: { name: colombus-global-secret }   # 공통
+            - secretRef: { name: __SVC__-app-secret }       # 서비스별
+
+          env:
+            - name: SPRING_CONFIG_ADDITIONAL_LOCATION
+              value: "file:/config/"
+
+          volumeMounts:
+            - name: app-config
+              mountPath: /config
+              readOnly: true
+
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: __PORT__ }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: __PORT__ }
+            initialDelaySeconds: 30
+            periodSeconds: 30
+
+      volumes:
+        - name: app-config
+          secret:
+            secretName: __SVC__-app-secret
+            items:
+              - key: application.properties
+                path: application.properties

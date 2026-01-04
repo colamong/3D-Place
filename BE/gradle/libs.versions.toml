@@ -1,0 +1,236 @@
+[versions]
+# =============================================================================
+# Core Platform & Spring Ecosystem
+# =============================================================================
+java         = "21"
+kotlin       = "2.0.21"
+spring-boot  = "3.5.6"
+spring-cloud = "2025.0.0"
+
+# =============================================================================
+# Data, Messaging & Cache
+# =============================================================================
+# Database
+postgresql        = "42.7.8"
+r2dbc-postgresql  = "1.1.1.RELEASE"
+r2dbc-spi         = "1.0.0.RELEASE"
+
+# Migration / Codegen
+flyway = "11.15.0"
+jooq   = "3.20.8"
+
+# Messaging
+spring-kafka = "3.3.10"
+kafka-client = "3.9.1"
+
+# Cache
+caffeine = "3.2.2"
+
+# =============================================================================
+# Observability & API Documentation
+# =============================================================================
+micrometer                   = "1.16.0"
+opentelemetry                = "1.56.0"
+opentelemetry-instrumentation = "2.21.0"
+springdoc                    = "2.8.13"
+
+# =============================================================================
+# JSON, Logging & Jakarta
+# =============================================================================
+jackson           = "2.17.2"
+slf4j             = "2.0.13"
+jakarta-annotation = "3.0.0"
+jakarta-xml-bind = "4.0.0"
+
+# =============================================================================
+# Utilities & 3rd-Party Integrations
+# =============================================================================
+aws-bom        = "2.37.1"
+commons-io     = "2.18.0"
+tika           = "3.2.0"
+lombok         = "1.18.34"
+twelvemonkeys  = "3.12.0"
+nimbus-jose-jwt = "10.6"
+
+# =============================================================================
+# Test
+# =============================================================================
+testcontainers       = "1.21.3"
+testcontainers-redis = "2.2.4"
+
+# =============================================================================
+# Libraries
+# =============================================================================
+[libraries]
+
+# =============================================================================
+# Spring Boot Starters (버전은 Spring Boot BOM이 관리)
+# =============================================================================
+
+# --- Web / WebFlux / WebSocket
+spring-boot-starter-web       = { module = "org.springframework.boot:spring-boot-starter-web" }
+spring-boot-starter-webflux   = { module = "org.springframework.boot:spring-boot-starter-webflux" }
+spring-boot-starter-websocket = { module = "org.springframework.boot:spring-boot-starter-websocket" }
+
+# --- Security / OAuth2
+spring-boot-starter-security              = { module = "org.springframework.boot:spring-boot-starter-security" }
+spring-boot-starter-oauth2-client         = { module = "org.springframework.boot:spring-boot-starter-oauth2-client" }
+spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
+
+# --- Actuator / Validation
+spring-boot-starter-actuator   = { module = "org.springframework.boot:spring-boot-starter-actuator" }
+spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+
+# --- Data Access (JPA / jOOQ / Redis / R2DBC)
+spring-boot-starter-data-jpa           = { module = "org.springframework.boot:spring-boot-starter-data-jpa" }
+spring-boot-starter-jooq               = { module = "org.springframework.boot:spring-boot-starter-jooq" }
+spring-boot-starter-data-redis         = { module = "org.springframework.boot:spring-boot-starter-data-redis" }
+spring-boot-starter-data-redis-reactive = { module = "org.springframework.boot:spring-boot-starter-data-redis-reactive" }
+spring-boot-starter-data-r2dbc         = { module = "org.springframework.boot:spring-boot-starter-data-r2dbc" }
+spring-boot-starter-jdbc               = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
+
+# =============================================================================
+# Spring Boot / Spring Cloud BOM & Configuration
+# =============================================================================
+spring-boot-dependencies        = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-boot-autoconfigure       = { group  = "org.springframework.boot", name = "spring-boot-autoconfigure", version.ref = "spring-boot" }
+spring-boot-configuration-processor = { group = "org.springframework.boot", name = "spring-boot-configuration-processor", version.ref = "spring-boot" }
+
+spring-cloud-dependencies           = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+spring-cloud-starter-gateway-server-webflux = { module = "org.springframework.cloud:spring-cloud-starter-gateway-server-webflux" }
+
+# Spring Session
+spring-session-data-redis = { module = "org.springframework.session:spring-session-data-redis" }
+
+# =============================================================================
+# Messaging (Kafka)
+# =============================================================================
+spring-kafka   = { module = "org.springframework.kafka:spring-kafka", version.ref = "spring-kafka" }
+kafka-clients  = { module = "org.apache.kafka:kafka-clients", version.ref = "kafka-client" }
+kafka-streams  = { module = "org.apache.kafka:kafka-streams", version.ref = "kafka-client" }
+
+# =============================================================================
+# Database, Migration & Drivers
+# =============================================================================
+
+# --- JDBC / R2DBC Drivers
+postgresql       = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+r2dbc-postgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "r2dbc-postgresql" }
+r2dbc-spi        = { module = "io.r2dbc:r2dbc-spi", version.ref = "r2dbc-spi" }
+
+# --- Flyway
+flyway-core               = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
+
+# --- jOOQ
+jooq                   = { module = "org.jooq:jooq", version.ref = "jooq" }
+jooq-meta              = { module = "org.jooq:jooq-meta", version.ref = "jooq" }
+jooq-codegen           = { module = "org.jooq:jooq-codegen", version.ref = "jooq" }
+jooq-postgres-extensions = { module = "org.jooq:jooq-postgres-extensions", version.ref = "jooq" }
+
+# --- Caching
+caffeine = { module = "com.github.ben-manes.caffeine:caffeine", version.ref = "caffeine" }
+
+# =============================================================================
+# Observability & Tracing
+# =============================================================================
+
+# Micrometer (Metrics)
+micrometer-prometheus   = { module = "io.micrometer:micrometer-registry-prometheus", version.ref = "micrometer" }
+micrometer-registry-otlp = { module = "io.micrometer:micrometer-registry-otlp", version.ref = "micrometer" }
+
+# Micrometer Tracing (버전은 Spring BOM에서 관리)
+micrometer-tracing                     = { module = "io.micrometer:micrometer-tracing" }
+micrometer-tracing-bridge-otel         = { module = "io.micrometer:micrometer-tracing-bridge-otel" }
+micrometer-tracing-reporter-wavefront  = { module = "io.micrometer:micrometer-tracing-reporter-wavefront" }
+
+# OpenTelemetry Core
+opentelemetry-bom       = { module = "io.opentelemetry:opentelemetry-bom", version.ref = "opentelemetry" }
+opentelemetry-api       = { module = "io.opentelemetry:opentelemetry-api" }
+opentelemetry-sdk       = { module = "io.opentelemetry:opentelemetry-sdk" }
+opentelemetry-exporter-otlp = { module = "io.opentelemetry:opentelemetry-exporter-otlp" }
+
+# OpenTelemetry Instrumentation
+opentelemetry-instrumentation-annotations = { module = "io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations", version.ref = "opentelemetry-instrumentation" }
+opentelemetry-spring-boot-starter        = { module = "io.opentelemetry.instrumentation:opentelemetry-spring-boot-starter", version.ref = "opentelemetry-instrumentation" }
+
+# API Documentation
+springdoc-openapi-starter-webflux-ui = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc" }
+
+# =============================================================================
+# Security / Auth / JWT
+# =============================================================================
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+
+# =============================================================================
+# AWS & External Integrations
+# =============================================================================
+aws-bom   = { module = "software.amazon.awssdk:bom", version.ref = "aws-bom" }
+awssdk-s3 = { module = "software.amazon.awssdk:s3" }
+awssdk-sts = { module = "software.amazon.awssdk:sts" }
+
+# =============================================================================
+# JSON, Logging & Jakarta
+# =============================================================================
+
+# Jackson
+jackson-databind      = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-datatype-jsr310 = { module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310", version.ref = "jackson" }
+
+# Logging
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+
+# Jakarta
+jakarta-annotation-api = { module = "jakarta.annotation:jakarta.annotation-api", version.ref = "jakarta-annotation" }
+jakarta-xml-bind-api = { module = "jakarta.xml.bind:jakarta.xml.bind-api", version.ref = "jakarta-xml-bind" }
+
+# =============================================================================
+# Utilities & Media
+# =============================================================================
+
+# Commons
+commons-codec = { module = "commons-codec:commons-codec" }
+commons-io    = { module = "commons-io:commons-io", version.ref = "commons-io" }
+
+# Lombok
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
+
+# Image / File Handling
+tika-core            = { module = "org.apache.tika:tika-core", version.ref = "tika" }
+tika-parsers-standard = { module = "org.apache.tika:tika-parsers-standard-package", version.ref = "tika" }
+twelvemonkeys-core   = { module = "com.twelvemonkeys.imageio:imageio-core", version.ref = "twelvemonkeys" }
+twelvemonkeys-webp   = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "twelvemonkeys" }
+twelvemonkeys-jpeg   = { module = "com.twelvemonkeys.imageio:imageio-jpeg", version.ref = "twelvemonkeys" }
+
+# =============================================================================
+# Test Dependencies
+# =============================================================================
+
+# Spring Test
+spring-boot-starter-test   = { module = "org.springframework.boot:spring-boot-starter-test" }
+spring-boot-testcontainers = { module = "org.springframework.boot:spring-boot-testcontainers", version.ref = "spring-boot" }
+
+# Testcontainers
+testcontainers-junit      = { module = "org.testcontainers:junit-jupiter", version.ref = "testcontainers" }
+testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
+testcontainers-kafka      = { module = "org.testcontainers:kafka", version.ref = "testcontainers" }
+testcontainers-redis      = { module = "com.redis:testcontainers-redis", version.ref = "testcontainers-redis" }
+
+# =============================================================================
+# Gradle Plugins
+# =============================================================================
+[plugins]
+
+# -----------------------------------------------------------------------------
+# Spring & Kotlin
+# -----------------------------------------------------------------------------
+spring-boot  = { id = "org.springframework.boot",         version.ref = "spring-boot" }
+kotlin-jvm   = { id = "org.jetbrains.kotlin.jvm",         version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-jpa   = { id = "org.jetbrains.kotlin.plugin.jpa",  version.ref = "kotlin" }
+
+# -----------------------------------------------------------------------------
+# Database Migration & Codegen
+# -----------------------------------------------------------------------------
+flyway = { id = "org.flywaydb.flyway", version.ref = "flyway" }
+jooq   = { id = "nu.studer.jooq",      version = "10.1.1" }

@@ -1,0 +1,2 @@
+com.colombus.common.redis.RedisImperativeAutoConfiguration
+com.colombus.common.redis.RedisReactiveAutoConfiguration

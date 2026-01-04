@@ -1,0 +1,7 @@
+com.colombus.common.web.servlet.tracing.TraceWebAutoConfiguration
+com.colombus.common.web.servlet.clientip.ClientIpMvcAutoConfiguration
+com.colombus.common.web.servlet.exception.RestClientErrorAutoConfiguration
+com.colombus.common.web.servlet.exception.MvcExceptionAdviceAutoConfiguration
+com.colombus.common.web.webflux.clientip.ClientIpWebFluxAutoConfiguration
+com.colombus.common.web.webflux.exception.WebClientErrorAutoConfiguration
+com.colombus.common.web.webflux.exception.ReactiveExceptionAdviceAutoConfiguration

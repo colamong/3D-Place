@@ -1,0 +1,67 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: gateway-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: gateway-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/gateway
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  namespace: colombus
+  labels: { app: gateway }
+spec:
+  type: ClusterIP
+  selector: { app: gateway }
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: colombus
+  labels: { app: gateway }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: gateway }
+  template:
+    metadata:
+      labels: { app: gateway }
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: gateway
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/gateway:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080"                      
+          envFrom:
+            - secretRef: { name: colombus-global-secret }
+            - secretRef: { name: gateway-app-secret }
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 30

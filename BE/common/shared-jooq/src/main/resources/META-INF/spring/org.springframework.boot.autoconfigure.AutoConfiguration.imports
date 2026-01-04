@@ -1,0 +1,2 @@
+com.colombus.common.jooq.config.JooqJdbcAutoConfiguration
+com.colombus.common.jooq.config.JooqR2dbcAutoConfiguration

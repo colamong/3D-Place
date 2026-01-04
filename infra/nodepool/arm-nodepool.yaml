@@ -1,0 +1,54 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: arm-general
+spec:
+  disruption:
+    budgets:
+      - nodes: "10%"
+    consolidateAfter: 30s
+    consolidationPolicy: WhenEmptyOrUnderutilized
+
+  template:
+    metadata: {}
+    spec:
+      # 노드 자동 교체 주기 (기존 general-purpose랑 맞춤)
+      expireAfter: 336h
+      terminationGracePeriod: 24h0m0s
+
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        # 이미 있는 default NodeClass 재사용
+        name: default
+
+      requirements:
+        # 온디맨드만 (기존과 동일)
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+
+        # C/M/R 패밀리 (기존과 동일)
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values: ["c", "m", "r"]
+
+        # 5세대 이상 (기존 >4 이라서 사실상 5세대 이상)
+        - key: eks.amazonaws.com/instance-generation
+          operator: Gt
+          values: ["4"]
+
+        # 🔹 핵심: ARM64만 사용
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+
+        # 리눅스만
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+
+        # (옵션) “AWS Graviton CPU만” 꽉 막고 싶으면 추가
+        # - key: eks.amazonaws.com/instance-cpu-manufacturer
+        #   operator: In
+        #   values: ["aws"]

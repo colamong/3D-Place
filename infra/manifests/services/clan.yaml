@@ -1,0 +1,88 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: clan-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: clan-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/clan
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: clan-svc
+  namespace: colombus
+  labels:
+    app: clan-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: clan-svc
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clan-svc
+  namespace: colombus
+  labels:
+    app: clan-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clan-svc
+  template:
+    metadata:
+      labels:
+        app: clan-svc
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: clan-svc
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/clan:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080" 
+            - name: KAFKA_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_GROUP_ID
+              value: "clan-svc-group"
+            - name: KAFKA_USER_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP                      
+          envFrom:
+            - secretRef:
+                name: colombus-global-secret
+            - secretRef:
+                name: clan-app-secret
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30

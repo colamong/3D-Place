@@ -1,0 +1,2 @@
+com.colombus.common.security.servlet.ColombusServletSecurityAutoConfiguration
+com.colombus.common.security.webflux.ColombusWebfluxSecurityAutoConfiguration

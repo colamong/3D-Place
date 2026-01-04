@@ -1,0 +1,16 @@
+﻿apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: colombus-global-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: colombus-global-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/global

@@ -1,0 +1,89 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: leaderboard-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: leaderboard-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/leaderboard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboard-svc
+  namespace: colombus
+  labels:
+    app: leaderboard-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: leaderboard-svc
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: leaderboard-svc
+  namespace: colombus
+  labels:
+    app: leaderboard-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: leaderboard-svc
+  template:
+    metadata:
+      labels:
+        app: leaderboard-svc
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: leaderboard-svc
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/leaderboard:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080"    
+            - name: SPRING_KAFKA_STREAMS_STATE_DIR
+              value: "/tmp/leaderboard-streams" 
+            - name: KAFKA_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_GROUP_ID
+              value: "leaderboard-svc-group"
+            - name: KAFKA_USER_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP      
+          envFrom:
+            - secretRef:
+                name: colombus-global-secret
+            - secretRef:
+                name: leaderboard-app-secret
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30

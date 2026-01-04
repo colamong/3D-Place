@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: colombus-api-ingress
+  namespace: colombus
+  annotations:
+    kubernetes.io/ingress.class: alb-internal
+
+    alb.ingress.kubernetes.io/scheme: internal
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: colombus-app
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+    alb.ingress.kubernetes.io/healthcheck-protocol: HTTP
+spec:
+  ingressClassName: alb-internal
+  rules:
+    - http:
+        paths:
+          # 0) 헬스 체크 + CloudFront 오리진 체크용
+          - path: /actuator/health
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80    # 서비스 포트
+
+          # 1) 백엔드 API
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway
+                port:
+                  number: 80

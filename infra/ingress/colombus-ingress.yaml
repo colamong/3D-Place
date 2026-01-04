@@ -1,0 +1,35 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: colombus-ingress
+  namespace: colombus
+  annotations:
+    kubernetes.io/ingress.class: alb-internal
+
+    alb.ingress.kubernetes.io/scheme: internal          # VPC 내부용 ALB
+    alb.ingress.kubernetes.io/target-type: ip           # 파드 IP 타겟
+    alb.ingress.kubernetes.io/group.name: colombus-app  # 기존과 맞추고 싶으면 이름 같게
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+spec:
+  ingressClassName: alb-internal
+
+  rules:
+    - http:
+        paths:
+          # 1) 프론트: 루트(/) → fe 서비스
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fe
+                port:
+                  number: 80   # Service fe 의 port
+
+          # 2) 백엔드: /api → bff(게이트웨이) 서비스
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: gateway     # 실제 게이트웨이 서비스 이름으로 맞춰
+                port:
+                  number: 8080   # 그 서비스 port

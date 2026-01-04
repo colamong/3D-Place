@@ -1,0 +1,413 @@
+spring:
+  application:
+    name: colombus-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+  cloud:
+    gateway:
+          globalcors:
+              corsConfigurations:
+                '[/**]':
+                  allowedOrigins: ["http://localhost:5173", "http://localhost:3000"]
+                  allowedMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+                  allowedHeaders: ["*"]
+                  allowCredentials: true
+          routes:
+            # Auth0 회원가입 동기화
+            - id: auth0-registration-sync
+              uri: ${USER_SERVICE_URL}
+              predicates:
+                - Path=/ingest/auth0/registration
+                - Method=POST
+              filters:
+                - PreserveHostHeader
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@m2mClientKeyResolver}"
+                    redis-rate-limiter.replenishRate: 50
+                    redis-rate-limiter.burstCapacity: 100
+                    deny-empty-key: true
+              metadata:
+                entry: m2m
+                required-aud: "user-svc"
+                required-need: "user:write"
+
+            # 로그인 시작
+            - id: auth-login-start
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/login
+              filters:
+                - SetPath=/oauth2/authorization/auth0
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 로그인 콜백 처리
+            - id: auth-login-callback
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/login/oauth2/code/**
+              filters:
+                - StripPrefix=1
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 로그아웃
+            - id: auth-logout
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=./api/logout
+              filters:
+                - StripPrefix=1
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 전체 로그아웃
+            - id: auth-logout-all
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/logout-all
+              filters:
+                - SetPath=/auth/logout-all
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 인증 상태 확인
+            - id: auth-state-api
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/auth/state
+              filters:
+                - StripPrefix=1
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+
+            # SSO 링크 시작
+            - id: sso-link-start
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/users/{provider}:start-link
+              filters:
+                - SetPath=/internal/users/{provider}:start-link
+              metadata:
+                entry: browser
+                exchange: none
+
+            # SSO 연결 콜백 처리
+            - id: sso-link-callback
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/users/oauth/link/callback
+              filters:
+                - SetPath=/internal/users/oauth/link/callback
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 세션 만료
+            - id: session-expired
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/session-expired
+              filters:
+                - StripPrefix=1
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+
+            # 이메일 인증 처리
+            - id: auth-verify-resend
+              uri: ${AUTH_SERVICE_URL}
+              predicates:
+                - Path=/api/verify-email/resend
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+
+            # ====================
+            # 유저 서비스
+            # ====================
+            # 유저 서비스 - 공개 api
+            - id: user-public-api
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/users/profile/{nicknameHandle}
+                - Method=GET
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+                csrf-mode: none
+
+            # 유저 서비스 - READ
+            - id: user-api-read
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/users/**
+                - Method=GET
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                csrf-mode: none
+            
+            # 유저 서비스 - WRITE
+            - id: user-api-write
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/users/**
+                - Method=POST,PATCH,DELETE
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+
+            # ====================
+            # 클랜 서비스
+            # ====================
+            # 클랜 서비스 - 공개 api (로그인 필요 없음)
+            - id: clan-public-api
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/clans/public
+                - Method=GET
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+                csrf-mode: none
+
+            # 클랜 서비스 - READ
+            - id: clan-api-read
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/clans/**
+                - Method=GET
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                csrf-mode: none
+
+            # 클랜 서비스 - WRITE
+            - id: clan-api-write
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/clans/**
+                - Method=POST,PATCH,DELETE
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+            
+            # ====================
+            # 미디어 서비스
+            # ====================
+            # 이미지 업로드
+            - id: get-presign-url
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/uploads/**
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+
+            # ====================
+            # 페인트 서비스
+            # ====================
+            - id: paint-api-write
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/paints/**
+                - Method=POST,DELETE
+              filters:
+                - RemoveRequestHeader=Cookie
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+
+            # ====================
+            # 리더보드 서비스
+            # ====================
+            # 리더보드 - READ
+            - id: leaderboard-api-read
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/leaderboard/**
+                - Method=GET
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+                csrf-mode: none
+
+            # ====================
+            # 월드 서비스
+            # ====================
+            # 월드 서비스 - READ
+            - id: world-api-read
+              uri: ${BFF_SERVICE_URL}
+              predicates:
+                - Path=/api/world/**
+                - Method=GET
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    key-resolver: "#{@userKeyResolver}"
+                    redis-rate-limiter.replenishRate: 10
+                    redis-rate-limiter.burstCapacity: 20
+                    deny-empty-key: false
+                    empty-key-status: TOO_MANY_REQUESTS
+              metadata:
+                entry: browser
+                exchange: none
+                csrf-mode: none
+server:
+  port: 8080
+
+internal-jwt:
+  jwk-set-uri: ${AUTH_SERVICE_URL}/.well-known/jwks.json
+
+auth-svc:
+  base-url: ${AUTH_SERVICE_URL}
+
+# =========================
+# Actuator / Prometheus
+# =========================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+      roles: ACTUATOR
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+security:
+  actuator:
+    username: ${ACTUATOR_USERNAME}
+    password: ${ACTUATOR_PASSWORD}
+  internal:
+    enabled: false
+
+# dev CORS (SPA가 다른 포트면 허용)
+custom:
+  cors:
+    allowed-origins: "http://localhost:5173,http://localhost:3000"
+
+# =========================
+# Logging
+# ======================
+logging:
+  level:
+    root: INFO
+    com.colombus.gateway.security: ${LOG_LEVEL:INFO}
+    org.springframework.security: ${LOG_LEVEL:INFO}
+    org.springframework.cloud.gateway: ${LOG_LEVEL:INFO}
+    org.springframework.web.reactive: INFO
+    com.nimbusds.jose: DEBUG
+    com.colombus: DEBUG

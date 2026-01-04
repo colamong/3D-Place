@@ -1,0 +1,83 @@
+﻿﻿apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: auth-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: auth-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/auth
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-svc
+  namespace: colombus
+  labels: { app: auth-svc }
+spec:
+  type: ClusterIP
+  selector: { app: auth-svc }
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-svc
+  namespace: colombus
+  labels: { app: auth-svc }
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: auth-svc }
+  template:
+    metadata:
+      labels: { app: auth-svc }
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      volumes:
+        - name: auth-client-pem
+          secret:
+            secretName: auth-app-secret
+            items:
+              - key: AUTH_CLIENT_PRIVATE_PEM
+                path: auth-client-private.pem
+              - key: AUTH_CLIENT_PUBLIC_PEM
+                path: auth-client-public.pem
+      containers:
+        - name: auth-svc
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/auth:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080"
+            - name: SPRING_SESSION_REDIS_CONFIGURE_ACTION
+              value: none
+          volumeMounts:
+            - name: auth-client-pem
+              mountPath: /app/keys/auth
+              readOnly: true
+          envFrom:
+            - secretRef: { name: colombus-global-secret }
+            - secretRef: { name: auth-app-secret }
+          readinessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /actuator/health, port: 8080 }
+            initialDelaySeconds: 30
+            periodSeconds: 30

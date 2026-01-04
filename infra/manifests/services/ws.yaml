@@ -1,0 +1,88 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ws-app-secret
+  namespace: colombus
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: colombus-asm-store
+    kind: ClusterSecretStore
+  target:
+    name: ws-app-secret
+    creationPolicy: Owner
+  dataFrom:
+    - extract:
+        key: colombus/ws
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ws-svc
+  namespace: colombus
+  labels:
+    app: ws-svc
+spec:
+  type: ClusterIP
+  selector:
+    app: ws-svc
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ws-svc
+  namespace: colombus
+  labels:
+    app: ws-svc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ws-svc
+  template:
+    metadata:
+      labels:
+        app: ws-svc
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+      containers:
+        - name: ws-svc
+          image: 970103397792.dkr.ecr.ap-northeast-2.amazonaws.com/colombus/ws:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT      # ★ Spring이 server.port 로 인식하는 환경변수
+              value: "8080" 
+            - name: KAFKA_CLIENT_ID
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: KAFKA_GROUP_ID
+              value: "ws-svc-group"
+            - name: KAFKA_USER_HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          envFrom:
+            - secretRef:
+                name: colombus-global-secret
+            - secretRef:
+                name: ws-app-secret
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30

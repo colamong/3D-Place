@@ -1,0 +1,6 @@
+<type>(<scope>)!: <subject> [<issue>]
+
+# <type> = feat | fix | chore | refactor | docs | test | style
+# <scope> = 도메인명 (예: user, auth)
+# <subject> = 간단한 요약 (한 줄)
+# <issue> = 연관 티켓 번호 (예: S13P31A207-12)
